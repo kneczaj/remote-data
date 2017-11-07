@@ -1,4 +1,3 @@
-import {Injectable} from '@angular/core';
 import {Http, RequestOptions} from '@angular/http';
 import {Observable} from 'rxjs/Observable';
 import {isNull} from 'util';
@@ -93,7 +92,6 @@ export abstract class RestItem {
  * A class to communicate with rest interface
  *
  */
-@Injectable()
 export class RestService<T extends RestItem> {
   /**
    * Constructor
