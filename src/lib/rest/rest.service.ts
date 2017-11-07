@@ -1,6 +1,7 @@
 import {Http, RequestOptions} from '@angular/http';
 import {Observable} from 'rxjs/Observable';
 import {isNull} from 'util';
+import 'rxjs/add/operator/map';
 
 /**
  * An abstract class for objects exchanged with a REST backend
