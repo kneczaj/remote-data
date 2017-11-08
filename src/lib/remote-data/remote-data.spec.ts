@@ -32,7 +32,6 @@ class SampleService {
 
 describe('RemoteData - funcional - with a sample service', () => {
   let service: SampleService;
-  let httpMock;
   let subscribeSpy;
 
   beforeEach(async(() => {
@@ -46,7 +45,7 @@ describe('RemoteData - funcional - with a sample service', () => {
         SampleService,
         { provide: XHRBackend, useClass: MockBackend }
       ]
-    }); //.compileComponents();
+    });
     service = TestBed.get(SampleService);
     subscribeSpy = jasmine.createSpy('subscribeSpy');
   }));
