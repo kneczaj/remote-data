@@ -14,9 +14,9 @@ export abstract class RestItem {
    *
    * TODO: encapsulate these three and let to set it just by the service
    */
-  public static resourceUrl: string;
-  public static http: Http;
-  public static requestOptions: RequestOptions;
+  public resourceUrl: string;
+  public http: Http;
+  public requestOptions: RequestOptions;
 
   private _id: number = null;
 
@@ -34,6 +34,8 @@ export abstract class RestItem {
 
   /**
    * Serializes object to backend data format
+   *
+   * TODO: check if on save according to REST conventions the id should be dumped too
    */
   abstract dump(): {};
 
@@ -50,10 +52,11 @@ export abstract class RestItem {
    */
   public delete(): Observable<RestItem> {
     const subject = new Subject<RestItem>();
-    RestItem.http.delete(`${RestItem.resourceUrl}/${this.id}`, RestItem.requestOptions).subscribe(request => {
+    this.http.delete(`${this.resourceUrl}/${this.id}`, this.requestOptions).subscribe(request => {
       this._id = null;
       subject.next(this);
     });
+    // TODO: this subject seems to be not subscribable
     return subject.asObservable();
   }
 
@@ -66,11 +69,16 @@ export abstract class RestItem {
 
   /**
    * Makes POST request to save the object to the DB and assign an ID.
+   *
+   * TODO: this does not work for now, because an object which does not has resource url assigned (constructed outside)
+   *  the rest service cannot communicate with BE. A solution may be to make a factory which creates the service and
+   *  the item class at once, or to move the communication methods to the service...
+   *
    * @returns {Observable<RestItem>}
    */
   protected create(): Observable<RestItem> {
     const subject = new Subject<RestItem>();
-    RestItem.http.post(RestItem.resourceUrl, this.dump(), RestItem.requestOptions).subscribe(request => {
+    this.http.post(this.resourceUrl, this.dump(), this.requestOptions).subscribe(request => {
       this.id = request.json().id;
       subject.next(this);
     });
@@ -83,10 +91,10 @@ export abstract class RestItem {
    */
   protected update(): Observable<RestItem> {
     const subject = new Subject<RestItem>();
-    RestItem.http.put(
-      `${RestItem.resourceUrl}/${this.id}`,
+    this.http.put(
+      `${this.resourceUrl}/${this.id}`,
       this.dump(),
-      RestItem.requestOptions
+      this.requestOptions
     ).subscribe(() => {
       subject.next(this);
     });
@@ -112,9 +120,6 @@ export class RestService<T extends RestItem> {
     private resourceUrl: string,
     private ResourceClass: any
   ) {
-    this.ResourceClass.http = this.http;
-    this.ResourceClass.resourceUrl = this.http;
-    this.ResourceClass.requestOptions = this.requestOptions;
   }
 
   getAll(): Observable<Array<T>> {
@@ -125,11 +130,14 @@ export class RestService<T extends RestItem> {
   }
 
   get(id: number): Observable<T> {
-    return this.http.get(this.resourceUrl).map(response => this.create(response.json()));
+    return this.http.get(`${this.resourceUrl}/${id}`).map(response => this.create(response.json()));
   }
 
   private create(data: {}): T {
     const result = new this.ResourceClass();
+    result.http = this.http;
+    result.resourceUrl = this.resourceUrl;
+    result.requestOptions = this.requestOptions;
     result.load(data);
     return result;
   }
