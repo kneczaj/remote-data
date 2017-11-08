@@ -2,6 +2,7 @@ import {Http, RequestOptions} from '@angular/http';
 import {Observable} from 'rxjs/Observable';
 import {isNull} from 'util';
 import 'rxjs/add/operator/map';
+import {Subject} from 'rxjs/Subject';
 
 /**
  * An abstract class for objects exchanged with a REST backend
@@ -47,13 +48,13 @@ export abstract class RestItem {
    * Makes DELETE request to delete the object from the DB, as the object gets deleted the ID is set to null
    * @returns {Observable<RestItem>}
    */
-  public delete() {
-    const observable = RestItem.http.delete(`${RestItem.resourceUrl}/${this.id}`, RestItem.requestOptions);
-    observable.subscribe(request => {
+  public delete(): Observable<RestItem> {
+    const subject = new Subject<RestItem>();
+    RestItem.http.delete(`${RestItem.resourceUrl}/${this.id}`, RestItem.requestOptions).subscribe(request => {
       this._id = null;
+      subject.next(this);
     });
-    // TODO: wait for the ID to be unset
-    return observable.map(data => this);
+    return subject.asObservable();
   }
 
   public save(): Observable<RestItem> {
@@ -68,12 +69,12 @@ export abstract class RestItem {
    * @returns {Observable<RestItem>}
    */
   protected create(): Observable<RestItem> {
-    const observable = RestItem.http.post(RestItem.resourceUrl, this.dump(), RestItem.requestOptions);
-    observable.subscribe(request => {
+    const subject = new Subject<RestItem>();
+    RestItem.http.post(RestItem.resourceUrl, this.dump(), RestItem.requestOptions).subscribe(request => {
       this.id = request.json().id;
+      subject.next(this);
     });
-    // TODO: wait for the ID to be set
-    return observable.map(data => this);
+    return subject.asObservable();
   }
 
   /**
@@ -81,11 +82,15 @@ export abstract class RestItem {
    * @returns {Observable<RestItem>}
    */
   protected update(): Observable<RestItem> {
-    return RestItem.http.put(
+    const subject = new Subject<RestItem>();
+    RestItem.http.put(
       `${RestItem.resourceUrl}/${this.id}`,
       this.dump(),
       RestItem.requestOptions
-    ).map(data => this);
+    ).subscribe(() => {
+      subject.next(this);
+    });
+    return subject.asObservable();
   }
 }
 
