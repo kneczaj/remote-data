@@ -1,5 +1,4 @@
 import {TestBed, async, inject} from '@angular/core/testing';
-import {RemoteData} from './remote-data';
 import {Injectable} from '@angular/core';
 import {Http, HttpModule, XHRBackend, Response, ResponseOptions, RequestOptions, RequestMethod} from '@angular/http';
 import {MockBackend, MockConnection} from '@angular/http/testing';
