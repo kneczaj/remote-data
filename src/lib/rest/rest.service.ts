@@ -34,7 +34,6 @@ export abstract class RestItem {
   /**
    * Serializes object to backend data format
    *
-   * TODO: check if on save according to REST conventions the id should be dumped too
    */
   abstract dump(): {};
 
@@ -66,10 +65,6 @@ export abstract class RestItem {
 
   /**
    * Makes POST request to save the object to the DB and assign an ID.
-   *
-   * TODO: this does not work for now, because an object which does not has resource url assigned (constructed outside)
-   *  the rest service cannot communicate with BE. A solution may be to make a factory which creates the service and
-   *  the item class at once, or to move the communication methods to the service...
    *
    * @returns {Observable<RestItem>}
    */
