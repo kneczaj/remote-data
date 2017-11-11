@@ -76,7 +76,6 @@ describe('RestService - functional - with a SampleData', () => {
     expect(TestBed.get(SampleDataRestService)).toBeTruthy();
   }));
   it('gets and item', async(inject([XHRBackend], (backend: MockBackend) => {
-
     backend.connections.subscribe((connection: MockConnection) => {
       expect(connection.request.url).toEqual('/sample_data/1');
       expect(connection.request.method).toEqual(RequestMethod.Get);
@@ -112,33 +111,73 @@ describe('RestService - functional - with a SampleData', () => {
     expect(subscribeSpy).toHaveBeenCalled();
   })));
 
-  it('produces deletable objects', async(inject([XHRBackend], (backend: MockBackend) => {
+  it('saves a new object to the REST API', async(inject([XHRBackend], (backend: MockBackend) => {
 
+    const postSpy = jasmine.createSpy('postSpy');
     backend.connections.subscribe((connection: MockConnection) => {
-      if (connection.request.method === RequestMethod.Get) {
-        expect(connection.request.url).toEqual('/sample_data/1');
-        connection.mockRespond(new Response(new ResponseOptions({
-          status: 200,
-          body: itemsDB[0]
-        })));
-      }
-      if (connection.request.method === RequestMethod.Delete) {
-        expect(connection.request.url).toEqual('/sample_data/1');
-        connection.mockRespond(new Response(new ResponseOptions({
-          status: 200,
-          body: itemsDB[0]
-        })));
-      }
+      postSpy();
+      expect(connection.request.url).toEqual('/sample_data');
+      expect(connection.request.method).toBe(RequestMethod.Post);
+      connection.mockRespond(new Response(new ResponseOptions({
+        status: 200,
+        body: {
+          id: itemsDB[0].id
+        }
+      })));
     });
 
-    service.get(1).subscribe(item => {
-      expect(item.a).toEqual(1);
-      expect(item.id).toEqual(1);
+    const newItem = TestBed.get(SampleDataRestService).createNew();
+    newItem.a = 100;
+    newItem.save();
+    expect(postSpy).toHaveBeenCalled();
+  })));
+
+  describe('after getting an object with GET', () => {
+
+    let item: SampleItem;
+    let deleteSpy;
+    let putSpy;
+
+    beforeEach(async(inject([XHRBackend], (backend: MockBackend) => {
+      deleteSpy = jasmine.createSpy('deleteSpy');
+      putSpy = jasmine.createSpy('putSpy');
+      backend.connections.subscribe((connection: MockConnection) => {
+        expect(connection.request.url).toEqual('/sample_data/1');
+        if (connection.request.method === RequestMethod.Delete) {
+          deleteSpy();
+        } else if (connection.request.method === RequestMethod.Put) {
+          putSpy();
+        } else {
+          expect(connection.request.method).toEqual(RequestMethod.Get);
+        }
+        connection.mockRespond(new Response(new ResponseOptions({
+          status: 200,
+          body: itemsDB[0]
+        })));
+      });
+
+      service.get(1).subscribe(newItem => {
+        item = newItem;
+        expect(item.a).toEqual(1);
+        expect(item.id).toEqual(1);
+      });
+    })));
+
+    it('it is possible to delete the object', async(() => {
       item.delete().subscribe(deleted => {
         subscribeSpy();
         expect(item.id).toBeNull();
       });
+      expect(subscribeSpy).toHaveBeenCalled();
+      expect(deleteSpy).toHaveBeenCalled();
+    }));
+
+    it('save() produces PUT method on updated object', () => {
+      item.save().subscribe(saved => {
+        subscribeSpy();
+      });
+      expect(subscribeSpy).toHaveBeenCalled();
+      expect(putSpy).toHaveBeenCalled();
     });
-    expect(subscribeSpy).toHaveBeenCalled();
-  })));
+  });
 });

@@ -2,23 +2,22 @@ import {Http, RequestOptions} from '@angular/http';
 import {Observable} from 'rxjs/Observable';
 import {isNull} from 'util';
 import 'rxjs/add/operator/map';
-import {Subject} from 'rxjs/Subject';
 
 /**
  * An abstract class for objects exchanged with a REST backend
  */
 export abstract class RestItem {
 
-  /**
-   * To be assigned by the class factory
-   *
-   * TODO: encapsulate these three and let to set it just by the service
-   */
-  public resourceUrl: string;
-  public http: Http;
-  public requestOptions: RequestOptions;
-
   private _id: number = null;
+
+  /**
+   * The values are to assigned by the class factory
+   */
+  constructor(
+    public resourceUrl: string,
+    public http: Http,
+    public requestOptions: RequestOptions
+  ) {}
 
   get id() {
     return this._id;
@@ -51,20 +50,18 @@ export abstract class RestItem {
    * @returns {Observable<RestItem>}
    */
   public delete(): Observable<RestItem> {
-    const subject = new Subject<RestItem>();
-    this.http.delete(`${this.resourceUrl}/${this.id}`, this.requestOptions).subscribe(request => {
+    return this.http.delete(`${this.resourceUrl}/${this.id}`, this.requestOptions).map(request => {
+      // TODO: this will work if any subscribe is done, find a way to make it independent
       this._id = null;
-      subject.next(this);
+      return this;
     });
-    // TODO: this subject seems to be not subscribable
-    return subject.asObservable();
   }
 
   public save(): Observable<RestItem> {
     if (!this._id) {
       return this.create();
     }
-    this.update();
+    return this.update();
   }
 
   /**
@@ -77,12 +74,10 @@ export abstract class RestItem {
    * @returns {Observable<RestItem>}
    */
   protected create(): Observable<RestItem> {
-    const subject = new Subject<RestItem>();
-    this.http.post(this.resourceUrl, this.dump(), this.requestOptions).subscribe(request => {
+    return this.http.post(this.resourceUrl, this.dump(), this.requestOptions).map(request => {
       this.id = request.json().id;
-      subject.next(this);
+      return this;
     });
-    return subject.asObservable();
   }
 
   /**
@@ -90,15 +85,13 @@ export abstract class RestItem {
    * @returns {Observable<RestItem>}
    */
   protected update(): Observable<RestItem> {
-    const subject = new Subject<RestItem>();
-    this.http.put(
+    return this.http.put(
       `${this.resourceUrl}/${this.id}`,
       this.dump(),
       this.requestOptions
-    ).subscribe(() => {
-      subject.next(this);
+    ).map(() => {
+      return this;
     });
-    return subject.asObservable();
   }
 }
 
@@ -133,11 +126,24 @@ export class RestService<T extends RestItem> {
     return this.http.get(`${this.resourceUrl}/${id}`).map(response => this.create(response.json()));
   }
 
+  /**
+   * Create a new item which is not taken from REST backend
+   * @returns {T}
+   */
+  createNew(): T {
+    return new this.ResourceClass(
+      this.resourceUrl,
+      this.http,
+      this.requestOptions
+    );
+  }
+
+  /**
+   * Create a item loaded from REST backend
+   * @returns {T}
+   */
   private create(data: {}): T {
-    const result = new this.ResourceClass();
-    result.http = this.http;
-    result.resourceUrl = this.resourceUrl;
-    result.requestOptions = this.requestOptions;
+    const result = this.createNew();
     result.load(data);
     return result;
   }
