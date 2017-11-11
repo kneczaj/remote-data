@@ -4,6 +4,7 @@ import {Http, HttpModule, XHRBackend, Response, ResponseOptions, RequestOptions,
 import {MockBackend, MockConnection} from '@angular/http/testing';
 import 'rxjs/add/operator/map';
 import {RestItem, RestService} from './rest.service';
+import {forEach} from "@angular/router/src/utils/collection";
 
 /**
  * Data format from the backend
@@ -19,9 +20,9 @@ declare class SampleItemPayload {
 class SampleItem extends RestItem {
   a: number;
 
-  load(data: SampleItemPayload) {
+  load(id: number, data: SampleItemPayload) {
     this.a = Number(data.A);
-    this.id = Number(data.id);
+    this.id = id;
   }
 
   dump() {
@@ -95,6 +96,8 @@ describe('RestService - functional - with a SampleData', () => {
 
   it('gets all items', async(inject([XHRBackend], (backend: MockBackend) => {
 
+    const queriedIds = new Set(itemsDB.map(item => Number(item.id)));
+
     backend.connections.subscribe((connection: MockConnection) => {
       expect(connection.request.url).toEqual('/sample_data');
       expect(connection.request.method).toEqual(RequestMethod.Get);
@@ -107,6 +110,8 @@ describe('RestService - functional - with a SampleData', () => {
     service.getAll().subscribe((items: Array<SampleItem>) => {
       subscribeSpy();
       expect(items.length).toEqual(itemsDB.length);
+      items.map(item => Number(item.id)).forEach(id => queriedIds.delete(id));
+      expect(queriedIds.size).toEqual(0, `Not all ids were fetched, left ${queriedIds}`);
     });
     expect(subscribeSpy).toHaveBeenCalled();
   })));

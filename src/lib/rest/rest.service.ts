@@ -42,7 +42,7 @@ export abstract class RestItem {
    *
    * NOTE: should set the id;
    */
-  abstract load(data: {});
+  abstract load(id: number, data: {});
 
   /**
    * Makes DELETE request to delete the object from the DB, as the object gets deleted the ID is set to null
@@ -113,12 +113,16 @@ export class RestService<T extends RestItem> {
   getAll(): Observable<Array<T>> {
     return this.http.get(this.resourceUrl).map(response => {
       const data = response.json();
-      return data.map(this.create.bind(this));
+      return data.map(itemData => {
+        const id = Number(itemData.id);
+        delete itemData.id;
+        return this.create(id, itemData);
+      });
     });
   }
 
   get(id: number): Observable<T> {
-    return this.http.get(`${this.resourceUrl}/${id}`).map(response => this.create(response.json()));
+    return this.http.get(`${this.resourceUrl}/${id}`).map(response => this.create(id, response.json()));
   }
 
   /**
@@ -137,9 +141,9 @@ export class RestService<T extends RestItem> {
    * Create a item loaded from REST backend
    * @returns {T}
    */
-  private create(data: {}): T {
+  private create(id: number, data: {}): T {
     const result = this.createNew();
-    result.load(data);
+    result.load(id, data);
     return result;
   }
 }
