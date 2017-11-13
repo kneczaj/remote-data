@@ -15,9 +15,27 @@ gulp.task('clean', function() {
 });
 
 gulp.task('copy', ['clean'], function() {
-  return gulp.src([paths.lib + '**/*', '!**/*.spec.ts', './tsconfig.json']).pipe(gulp.dest(paths.build));
+  return gulp.src([
+    paths.lib + '**/*',
+    '!**/*.spec.ts',
+    './tsconfig.json'
+  ]).pipe(gulp.dest(paths.build));
 });
 
-gulp.task('build', ['copy'], function() {
+gulp.task('copy_dist', ['clean'], function() {
+  return gulp.src([
+    './README.md',
+    './LICENSE',
+    './package.json'
+  ]).pipe(gulp.dest(paths.dist));
+});
+
+// TODO: clean package.json
+
+gulp.task('ngc', ['copy'], function() {
   return ngc(paths.build + 'tsconfig.json');
 });
+
+gulp.task('build', ['ngc', 'copy_dist'], function() {});
+
+// TODO: add publish script
