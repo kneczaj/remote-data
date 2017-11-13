@@ -1,6 +1,6 @@
 import {Http, RequestOptions} from '@angular/http';
 import {Observable} from 'rxjs/Observable';
-import {isNull} from 'util';
+import {isNull, isNullOrUndefined} from 'util';
 import 'rxjs/add/operator/map';
 
 /**
@@ -59,7 +59,7 @@ export abstract class RestItem<BackendPayload> {
   }
 
   public save(): Observable< RestItem<BackendPayload> > {
-    if (!this._id) {
+    if (isNull(this._id)) {
       return this.create();
     }
     return this.update();
@@ -116,6 +116,9 @@ export class RestService<T extends RestItem<any> > {
     return this.http.get(this.resourceUrl).map(response => {
       const data = response.json();
       return data.map(itemData => {
+        if (isNullOrUndefined(itemData.id)) {
+          throw `Id is not defined when getAll from ${this.resourceUrl} triggered`;
+        }
         const id = Number(itemData.id);
         delete itemData.id;
         return this.create(id, itemData);

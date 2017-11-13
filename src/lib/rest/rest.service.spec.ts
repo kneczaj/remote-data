@@ -45,7 +45,10 @@ class SampleDataRestService extends RestService<SampleItem> {
   }
 }
 
-const itemsDB: SampleItemPayload[] = [{
+const itemsDBsource: SampleItemPayload[] = [{
+  id: '0',
+  A: '500'
+}, {
   id: '1',
   A: '1'
 }, {
@@ -56,8 +59,12 @@ const itemsDB: SampleItemPayload[] = [{
 describe('RestService - functional - with a SampleData', () => {
   let service: SampleDataRestService;
   let subscribeSpy;
+  let itemsDB;
 
   beforeEach(async(() => {
+    // clone itemsDB for tests: some queries modify the received objects, but it is not the case then they are taken
+    // from HTTP - then they are copied every time
+    itemsDB = itemsDBsource.map(item => Object.assign({}, item));
     TestBed.configureTestingModule({
       imports: [
         HttpModule
@@ -76,19 +83,20 @@ describe('RestService - functional - with a SampleData', () => {
     expect(TestBed.get(SampleDataRestService)).toBeTruthy();
   }));
   it('gets and item', async(inject([XHRBackend], (backend: MockBackend) => {
+    const queriedId = 0;
     backend.connections.subscribe((connection: MockConnection) => {
-      expect(connection.request.url).toEqual('/sample_data/1');
+      expect(connection.request.url).toEqual(`/sample_data/${queriedId}`);
       expect(connection.request.method).toEqual(RequestMethod.Get);
       connection.mockRespond(new Response(new ResponseOptions({
         status: 200,
-        body: itemsDB[0]
+        body: itemsDB[queriedId]
       })));
     });
 
-    service.get(1).subscribe((item) => {
+    service.get(queriedId).subscribe((item) => {
       subscribeSpy();
-      expect(item.a).toEqual(1);
-      expect(item.id).toEqual(1);
+      expect(item.a).toEqual(Number(itemsDB[queriedId]['A']));
+      expect(item.id).toEqual(Number(itemsDB[queriedId]['id']));
     });
     expect(subscribeSpy).toHaveBeenCalled();
   })));
@@ -141,12 +149,13 @@ describe('RestService - functional - with a SampleData', () => {
     let item: SampleItem;
     let deleteSpy;
     let putSpy;
+    const queriedId = 0;
 
     beforeEach(async(inject([XHRBackend], (backend: MockBackend) => {
       deleteSpy = jasmine.createSpy('deleteSpy');
       putSpy = jasmine.createSpy('putSpy');
       backend.connections.subscribe((connection: MockConnection) => {
-        expect(connection.request.url).toEqual('/sample_data/1');
+        expect(connection.request.url).toEqual(`/sample_data/${queriedId}`);
         if (connection.request.method === RequestMethod.Delete) {
           deleteSpy();
         } else if (connection.request.method === RequestMethod.Put) {
@@ -156,14 +165,14 @@ describe('RestService - functional - with a SampleData', () => {
         }
         connection.mockRespond(new Response(new ResponseOptions({
           status: 200,
-          body: itemsDB[0]
+          body: itemsDB[queriedId]
         })));
       });
 
-      service.get(1).subscribe(newItem => {
+      service.get(queriedId).subscribe(newItem => {
         item = newItem;
-        expect(item.a).toEqual(1);
-        expect(item.id).toEqual(1);
+        expect(item.a).toEqual(Number(itemsDB[queriedId]['A']));
+        expect(item.id).toEqual(Number(itemsDB[queriedId]['id']));
       });
     })));
 
