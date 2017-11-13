@@ -41,7 +41,7 @@ class SampleDataRestService extends RestService<SampleItem> {
     http: Http,
     requestOptions: RequestOptions
   ) {
-    super(http, requestOptions, '/sample_data', SampleItem);
+    super(http, requestOptions, SampleItem, '/sample_data');
   }
 }
 

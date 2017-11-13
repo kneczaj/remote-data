@@ -103,8 +103,11 @@ export abstract class RestItem<BackendPayload> {
  * This class acts as a factory for RestItems which may be save/deleted with affect to backend's DB content. Usually it
  * should be extended by a child class to specify the resource URL and the class of the objects which will be created by
  * the service.
+ *
+ * NOTE: this is an a class with no specified resourceUrl. It is useful to create REST services with non-standard
+ * URLs e.g. with two levels of ids like /item1/<id>/item_property/<id2>
  */
-export class RestService<T extends RestItem<any> > {
+export class RestServiceBase<T extends RestItem<any> > {
   /**
    * Constructor
    * @param {Http} http
@@ -115,9 +118,90 @@ export class RestService<T extends RestItem<any> > {
   constructor(
     private http: Http,
     private requestOptions: RequestOptions,
-    private resourceUrl: string,
     private ResourceClass: any
   ) {
+  }
+
+  /**
+   * Get all items from the resource
+   * @param {string} resourceUrl
+   * @returns {Observable<Array<T extends RestItem<any>>>}
+   */
+  getAll(resourceUrl: string): Observable<Array<T>> {
+    return this.http.get(resourceUrl).map(response => {
+      const data = response.json();
+      return data.map(itemData => {
+        if (isNullOrUndefined(itemData.id)) {
+          throw `Id is not defined when getAll from ${resourceUrl} triggered`;
+        }
+        const id = Number(itemData.id);
+        delete itemData.id;
+        return this.create(resourceUrl, id, itemData);
+      });
+    });
+  }
+
+  /**
+   * Get one item with specified id
+   * @param {number} id
+   * @param {string} resourceUrl
+   * @returns {Observable<T extends RestItem<any>>}
+   */
+  get(id: number, resourceUrl: string): Observable<T> {
+    return this.http.get(`${resourceUrl}/${id}`).map(response => this.create(resourceUrl, id, response.json()));
+  }
+
+  /**
+   * Create a new item which is not taken from REST backend
+   * @param {string} resourceUrl
+   * @returns {T}
+   */
+  createNew(resourceUrl: string): T {
+    return new this.ResourceClass(
+      resourceUrl,
+      this.http,
+      this.requestOptions
+    );
+  }
+
+  /**
+   * Create a item loaded from REST backend
+   * @param {string} resourceUrl
+   * @param {number} id
+   * @param {{}} data - data payload
+   * @returns {T}
+   */
+  private create(resourceUrl: string, id: number, data: {}): T {
+    const result = this.createNew(resourceUrl);
+    result.load(id, data);
+    return result;
+  }
+}
+
+/**
+ * A class to communicate with rest interface
+ *
+ * This class acts as a factory for RestItems which may be save/deleted with affect to backend's DB content. Usually it
+ * should be extended by a child class to specify the resource URL and the class of the objects which will be created by
+ * the service.
+ *
+ * From RestServiceBase it differs by holding a constant resourceUrl inside.
+ */
+export class RestService<T extends RestItem<any> > extends RestServiceBase<T> {
+  /**
+   * Constructor
+   * @param {Http} http
+   * @param {RequestOptions} requestOptions
+   * @param {any} ResourceClass - the same class as the generic T
+   * @param {string} resourceUrl
+   */
+  constructor(
+    http: Http,
+    requestOptions: RequestOptions,
+    ResourceClass: any,
+    private resourceUrl: string
+  ) {
+    super(http, requestOptions, ResourceClass);
   }
 
   /**
@@ -125,17 +209,7 @@ export class RestService<T extends RestItem<any> > {
    * @returns {Observable<Array<T extends RestItem<any>>>}
    */
   getAll(): Observable<Array<T>> {
-    return this.http.get(this.resourceUrl).map(response => {
-      const data = response.json();
-      return data.map(itemData => {
-        if (isNullOrUndefined(itemData.id)) {
-          throw `Id is not defined when getAll from ${this.resourceUrl} triggered`;
-        }
-        const id = Number(itemData.id);
-        delete itemData.id;
-        return this.create(id, itemData);
-      });
-    });
+    return super.getAll(this.resourceUrl);
   }
 
   /**
@@ -144,7 +218,7 @@ export class RestService<T extends RestItem<any> > {
    * @returns {Observable<T extends RestItem<any>>}
    */
   get(id: number): Observable<T> {
-    return this.http.get(`${this.resourceUrl}/${id}`).map(response => this.create(id, response.json()));
+    return super.get(id, this.resourceUrl);
   }
 
   /**
@@ -152,22 +226,6 @@ export class RestService<T extends RestItem<any> > {
    * @returns {T}
    */
   createNew(): T {
-    return new this.ResourceClass(
-      this.resourceUrl,
-      this.http,
-      this.requestOptions
-    );
-  }
-
-  /**
-   * Create a item loaded from REST backend
-   * @param {number} id
-   * @param {{}} data - data payload
-   * @returns {T}
-   */
-  private create(id: number, data: {}): T {
-    const result = this.createNew();
-    result.load(id, data);
-    return result;
+    return super.createNew(this.resourceUrl);
   }
 }
