@@ -5,8 +5,10 @@ import 'rxjs/add/operator/map';
 
 /**
  * An abstract class for objects exchanged with a REST backend
+ *
+ * @param BackendPayload - payload format exchanged with the backend
  */
-export abstract class RestItem {
+export abstract class RestItem<BackendPayload> {
 
   private _id: number = null;
 
@@ -35,20 +37,20 @@ export abstract class RestItem {
    * Serializes object to backend data format
    *
    */
-  abstract dump(): {};
+  abstract dump(): BackendPayload;
 
   /**
    * Create object from backend data.
    *
    * NOTE: should set the id;
    */
-  abstract load(id: number, data: {});
+  abstract load(id: number, data: BackendPayload);
 
   /**
    * Makes DELETE request to delete the object from the DB, as the object gets deleted the ID is set to null
    * @returns {Observable<RestItem>}
    */
-  public delete(): Observable<RestItem> {
+  public delete(): Observable< RestItem<BackendPayload> > {
     return this.http.delete(`${this.resourceUrl}/${this.id}`, this.requestOptions).map(request => {
       // TODO: this will work if any subscribe is done, find a way to make it independent
       this._id = null;
@@ -56,7 +58,7 @@ export abstract class RestItem {
     });
   }
 
-  public save(): Observable<RestItem> {
+  public save(): Observable< RestItem<BackendPayload> > {
     if (!this._id) {
       return this.create();
     }
@@ -68,7 +70,7 @@ export abstract class RestItem {
    *
    * @returns {Observable<RestItem>}
    */
-  protected create(): Observable<RestItem> {
+  protected create(): Observable< RestItem<BackendPayload> > {
     return this.http.post(this.resourceUrl, this.dump(), this.requestOptions).map(request => {
       this.id = request.json().id;
       return this;
@@ -76,10 +78,10 @@ export abstract class RestItem {
   }
 
   /**
-   * Makes PUT request to save the object to the DB and assign an ID.
+   * Makes PUT request to update the object in the DB.
    * @returns {Observable<RestItem>}
    */
-  protected update(): Observable<RestItem> {
+  protected update(): Observable< RestItem<BackendPayload> > {
     return this.http.put(
       `${this.resourceUrl}/${this.id}`,
       this.dump(),
@@ -94,7 +96,7 @@ export abstract class RestItem {
  * A class to communicate with rest interface
  *
  */
-export class RestService<T extends RestItem> {
+export class RestService<T extends RestItem<any> > {
   /**
    * Constructor
    * @param {Http} http

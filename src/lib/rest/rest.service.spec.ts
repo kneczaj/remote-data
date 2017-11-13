@@ -4,7 +4,6 @@ import {Http, HttpModule, XHRBackend, Response, ResponseOptions, RequestOptions,
 import {MockBackend, MockConnection} from '@angular/http/testing';
 import 'rxjs/add/operator/map';
 import {RestItem, RestService} from './rest.service';
-import {forEach} from "@angular/router/src/utils/collection";
 
 /**
  * Data format from the backend
@@ -17,7 +16,7 @@ declare class SampleItemPayload {
 /**
  * The proper class of the object with implemented load/dump to convert between the class and its payload format
  */
-class SampleItem extends RestItem {
+class SampleItem extends RestItem<SampleItemPayload> {
   a: number;
 
   load(id: number, data: SampleItemPayload) {
