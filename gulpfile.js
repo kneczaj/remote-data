@@ -1,6 +1,7 @@
 var gulp = require('gulp');
 var del = require('del');
 var ngc = require('gulp-ngc');
+const fs = require('fs');
 
 var paths = {
   dist: 'dist/',
@@ -30,12 +31,19 @@ gulp.task('copy_dist', ['clean'], function() {
   ]).pipe(gulp.dest(paths.dist));
 });
 
-// TODO: clean package.json
+gulp.task('clean:packageJson', ['copy_dist'], function() {
+  const packageJsonPath = paths.dist + 'package.json';
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
+  delete packageJson['dependencies'];
+  delete packageJson['scripts'];
+  delete packageJson['devDependencies'];
+  fs.writeFile(packageJsonPath, JSON.stringify(packageJson));
+});
 
 gulp.task('ngc', ['copy'], function() {
   return ngc(paths.build + 'tsconfig.json');
 });
 
-gulp.task('build', ['ngc', 'copy_dist'], function() {});
+gulp.task('build', ['ngc', 'copy_dist', 'clean:packageJson'], function() {});
 
 // TODO: add publish script
