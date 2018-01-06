@@ -1,6 +1,6 @@
-var gulp = require('gulp');
-var del = require('del');
-var ngc = require('gulp-ngc');
+const gulp = require('gulp');
+const del = require('del');
+const ngc = require('gulp-ngc');
 const fs = require('fs');
 
 var paths = {
@@ -34,7 +34,6 @@ gulp.task('copy_dist', ['clean'], function() {
 gulp.task('clean:packageJson', ['copy_dist'], function() {
   const packageJsonPath = paths.dist + 'package.json';
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
-  delete packageJson['dependencies'];
   delete packageJson['scripts'];
   delete packageJson['devDependencies'];
   fs.writeFile(packageJsonPath, JSON.stringify(packageJson));
