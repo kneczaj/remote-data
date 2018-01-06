@@ -116,8 +116,8 @@ export class RestServiceBase<T extends RestItem<any> > {
    * @param {any} ResourceClass - the same class as the generic T
    */
   constructor(
-    private http: Http,
-    private requestOptions: RequestOptions,
+    protected http: Http,
+    protected requestOptions: RequestOptions,
     private ResourceClass: any
   ) {
   }
@@ -199,7 +199,7 @@ export class RestService<T extends RestItem<any> > extends RestServiceBase<T> {
     http: Http,
     requestOptions: RequestOptions,
     ResourceClass: any,
-    private resourceUrl: string
+    protected resourceUrl: string
   ) {
     super(http, requestOptions, ResourceClass);
   }
