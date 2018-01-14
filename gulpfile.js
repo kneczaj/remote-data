@@ -23,7 +23,7 @@ gulp.task('copy', ['clean'], function() {
   ]).pipe(gulp.dest(paths.build));
 });
 
-gulp.task('copy_dist', ['clean'], function() {
+gulp.task('copy:project-files', ['clean'], function() {
   return gulp.src([
     './README.md',
     './LICENSE',
@@ -31,7 +31,11 @@ gulp.task('copy_dist', ['clean'], function() {
   ]).pipe(gulp.dest(paths.dist));
 });
 
-gulp.task('clean:packageJson', ['copy_dist'], function() {
+gulp.task('copy:ts', ['clean'], function() {
+  return gulp.src(paths.lib + '**/*.ts').pipe(gulp.dest(paths.dist));
+});
+
+gulp.task('clean:packageJson', ['copy:project-files'], function() {
   const packageJsonPath = paths.dist + 'package.json';
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
   delete packageJson['scripts'];
@@ -43,6 +47,10 @@ gulp.task('ngc', ['copy'], function() {
   return ngc(paths.build + 'tsconfig.json');
 });
 
-gulp.task('build', ['ngc', 'copy_dist', 'clean:packageJson'], function() {});
+// build package compiled to js
+gulp.task('build', ['ngc', 'copy:project-files', 'clean:packageJson'], function() {});
+
+// build package with ts files - for development purposes
+gulp.task('build:ts', ['copy:ts', 'copy:project-files', 'clean:packageJson'], function() {});
 
 // TODO: add publish script

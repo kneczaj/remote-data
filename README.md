@@ -36,7 +36,7 @@ Run `npm test` to execute the unit tests via [Karma](https://karma-runner.github
 
 ## Build
 
-Run `npm run build` to build the library. The build artifacts will be stored in the `dist/` directory.
+Run `npm run build` to build the library. Alternatively run `npm run build:ts` to build the library as Typescript for easier debugging. The build artifacts will be stored in the `dist/` directory.
 
 ## Demo app server
 
