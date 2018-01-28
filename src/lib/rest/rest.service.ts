@@ -10,7 +10,7 @@ import 'rxjs/add/operator/map';
  */
 export abstract class RestItem<BackendPayload> {
 
-  private _id: number = null;
+  private _id: number | string | null = null;
 
   /**
    * The values are to assign by the class factory
@@ -21,11 +21,11 @@ export abstract class RestItem<BackendPayload> {
     public requestOptions: RequestOptions
   ) {}
 
-  get id() {
+  get id(): number | string {
     return this._id;
   }
 
-  set id(value: number) {
+  set id(value: number | string) {
     if (isNull(this._id)) {
       this._id = value;
     } else {
@@ -46,7 +46,7 @@ export abstract class RestItem<BackendPayload> {
    * @param {number} id
    * @param {BackendPayload} data
    */
-  abstract load(id: number, data: BackendPayload);
+  abstract load(id: number | string, data: BackendPayload);
 
   /**
    * Makes DELETE request to delete the object from the DB, as the object gets deleted the ID is set to null
@@ -147,7 +147,7 @@ export class RestServiceBase<T extends RestItem<any> > {
    * @param {string} resourceUrl
    * @returns {Observable<T extends RestItem<any>>}
    */
-  get(id: number, resourceUrl: string): Observable<T> {
+  get(id: number | string, resourceUrl: string): Observable<T> {
     return this.http.get(`${resourceUrl}/${id}`).map(response => this.create(resourceUrl, id, response.json()));
   }
 
@@ -171,7 +171,7 @@ export class RestServiceBase<T extends RestItem<any> > {
    * @param {{}} data - data payload
    * @returns {T}
    */
-  private create(resourceUrl: string, id: number, data: {}): T {
+  private create(resourceUrl: string, id: number | string, data: {}): T {
     const result = this.createNew(resourceUrl);
     result.load(id, data);
     return result;
@@ -217,7 +217,7 @@ export class RestService<T extends RestItem<any> > extends RestServiceBase<T> {
    * @param {number} id
    * @returns {Observable<T extends RestItem<any>>}
    */
-  get(id: number): Observable<T> {
+  get(id: number | string): Observable<T> {
     return super.get(id, this.resourceUrl);
   }
 
