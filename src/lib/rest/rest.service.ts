@@ -118,7 +118,7 @@ export class RestServiceBase<T extends RestItem<any> > {
   constructor(
     protected http: Http,
     protected requestOptions: RequestOptions,
-    private ResourceClass: any
+    protected ResourceClass: any
   ) {
   }
 
