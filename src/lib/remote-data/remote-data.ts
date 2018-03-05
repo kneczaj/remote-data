@@ -39,12 +39,11 @@ export class RemoteData<T> {
    * A function to trigger async update
    * @returns {Observable<T>}
    */
-  update(): Observable<T> {
+  update(): void {
     const observable = this.updateFunction();
     observable.subscribe((data: T) => {
       this._value = data;
       this._subject.next(data);
     });
-    return observable;
   }
 }

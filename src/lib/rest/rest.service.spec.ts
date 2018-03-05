@@ -1,9 +1,9 @@
 import {TestBed, async, inject} from '@angular/core/testing';
 import {Injectable} from '@angular/core';
-import {Http, HttpModule, XHRBackend, Response, ResponseOptions, RequestOptions, RequestMethod} from '@angular/http';
-import {MockBackend, MockConnection} from '@angular/http/testing';
 import 'rxjs/add/operator/map';
 import {RestItem, RestService} from './rest.service';
+import { HttpClient } from '@angular/common/http';
+import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 
 /**
  * Data format from the backend
@@ -38,10 +38,9 @@ class SampleItem extends RestItem<SampleItemPayload> {
 class SampleDataRestService extends RestService<SampleItem> {
 
   constructor(
-    http: Http,
-    requestOptions: RequestOptions
+    http: HttpClient
   ) {
-    super(http, requestOptions, SampleItem, '/sample_data');
+    super(http, SampleItem, '/sample_data');
   }
 }
 
@@ -60,6 +59,7 @@ describe('RestService - functional - with a SampleData', () => {
   let service: SampleDataRestService;
   let subscribeSpy;
   let itemsDB;
+  let httpMock: HttpTestingController;
 
   beforeEach(async(() => {
     // clone itemsDB for tests: some queries modify the received objects, but it is not the case then they are taken
@@ -67,52 +67,39 @@ describe('RestService - functional - with a SampleData', () => {
     itemsDB = itemsDBsource.map(item => Object.assign({}, item));
     TestBed.configureTestingModule({
       imports: [
-        HttpModule
+        HttpClientTestingModule
       ],
       declarations: [
       ],
       providers: [
-        SampleDataRestService,
-        { provide: XHRBackend, useClass: MockBackend }
+        SampleDataRestService
       ]
     });
     service = TestBed.get(SampleDataRestService);
+    httpMock = TestBed.get(HttpTestingController);
     subscribeSpy = jasmine.createSpy('subscribeSpy');
   }));
   it(`creates`, async(() => {
     expect(TestBed.get(SampleDataRestService)).toBeTruthy();
   }));
-  it('gets and item', async(inject([XHRBackend], (backend: MockBackend) => {
+  it('gets and item', () => {
     const queriedId = 0;
-    backend.connections.subscribe((connection: MockConnection) => {
-      expect(connection.request.url).toEqual(`/sample_data/${queriedId}`);
-      expect(connection.request.method).toEqual(RequestMethod.Get);
-      connection.mockRespond(new Response(new ResponseOptions({
-        status: 200,
-        body: itemsDB[queriedId]
-      })));
-    });
 
     service.get(queriedId).subscribe((item) => {
       subscribeSpy();
       expect(item.a).toEqual(Number(itemsDB[queriedId]['A']));
       expect(item.id).toEqual(Number(itemsDB[queriedId]['id']));
     });
+    const req = httpMock.expectOne(`/sample_data/${queriedId}`);
+    expect(req.request.method).toEqual('GET');
+    req.flush(itemsDB[queriedId]);
+    httpMock.verify();
     expect(subscribeSpy).toHaveBeenCalled();
-  })));
+  });
 
-  it('gets all items', async(inject([XHRBackend], (backend: MockBackend) => {
+  it('gets all items', () => {
 
     const queriedIds = new Set(itemsDB.map(item => Number(item.id)));
-
-    backend.connections.subscribe((connection: MockConnection) => {
-      expect(connection.request.url).toEqual('/sample_data');
-      expect(connection.request.method).toEqual(RequestMethod.Get);
-      connection.mockRespond(new Response(new ResponseOptions({
-        status: 200,
-        body: itemsDB
-      })));
-    });
 
     service.getAll().subscribe((items: Array<SampleItem>) => {
       subscribeSpy();
@@ -120,77 +107,66 @@ describe('RestService - functional - with a SampleData', () => {
       items.map(item => Number(item.id)).forEach(id => queriedIds.delete(id));
       expect(queriedIds.size).toEqual(0, `Not all ids were fetched, left ${queriedIds}`);
     });
+
+    const req = httpMock.expectOne(`/sample_data`);
+    expect(req.request.method).toEqual('GET');
+    req.flush(itemsDB);
+    httpMock.verify();
     expect(subscribeSpy).toHaveBeenCalled();
-  })));
+  });
 
-  it('saves a new object to the REST API', async(inject([XHRBackend], (backend: MockBackend) => {
-
-    const postSpy = jasmine.createSpy('postSpy');
-    backend.connections.subscribe((connection: MockConnection) => {
-      postSpy();
-      expect(connection.request.url).toEqual('/sample_data');
-      expect(connection.request.method).toBe(RequestMethod.Post);
-      connection.mockRespond(new Response(new ResponseOptions({
-        status: 200,
-        body: {
-          id: itemsDB[0].id
-        }
-      })));
-    });
+  it('saves a new object to the REST API', () => {
 
     const newItem = TestBed.get(SampleDataRestService).createNew();
     newItem.a = 100;
-    newItem.save();
-    expect(postSpy).toHaveBeenCalled();
-  })));
+    newItem.save().subscribe();
+    const req = httpMock.expectOne(`/sample_data`);
+    expect(req.request.method).toEqual('POST');
+    req.flush({
+      id: itemsDB[0].id
+    });
+    httpMock.verify();
+  });
 
   describe('after getting an object with GET', () => {
 
     let item: SampleItem;
-    let deleteSpy;
-    let putSpy;
     const queriedId = 0;
 
-    beforeEach(async(inject([XHRBackend], (backend: MockBackend) => {
-      deleteSpy = jasmine.createSpy('deleteSpy');
-      putSpy = jasmine.createSpy('putSpy');
-      backend.connections.subscribe((connection: MockConnection) => {
-        expect(connection.request.url).toEqual(`/sample_data/${queriedId}`);
-        if (connection.request.method === RequestMethod.Delete) {
-          deleteSpy();
-        } else if (connection.request.method === RequestMethod.Put) {
-          putSpy();
-        } else {
-          expect(connection.request.method).toEqual(RequestMethod.Get);
-        }
-        connection.mockRespond(new Response(new ResponseOptions({
-          status: 200,
-          body: itemsDB[queriedId]
-        })));
-      });
-
+    beforeEach(() => {
       service.get(queriedId).subscribe(newItem => {
         item = newItem;
         expect(item.a).toEqual(Number(itemsDB[queriedId]['A']));
         expect(item.id).toEqual(Number(itemsDB[queriedId]['id']));
       });
-    })));
+
+      const req = httpMock.expectOne(`/sample_data/${queriedId}`);
+      expect(req.request.method).toEqual('GET');
+      req.flush(itemsDB[queriedId]);
+      httpMock.verify();
+    });
 
     it('it is possible to delete the object', async(() => {
       item.delete().subscribe(deleted => {
         subscribeSpy();
         expect(item.id).toBeNull();
       });
+      const req = httpMock.expectOne(`/sample_data/${queriedId}`);
+      expect(req.request.method).toEqual('DELETE');
+      req.flush({});
       expect(subscribeSpy).toHaveBeenCalled();
-      expect(deleteSpy).toHaveBeenCalled();
+      httpMock.verify();
     }));
 
     it('save() produces PUT method on updated object', () => {
       item.save().subscribe(saved => {
         subscribeSpy();
       });
+      const req = httpMock.expectOne(`/sample_data/${queriedId}`);
+      expect(req.request.method).toEqual('PUT');
+      req.flush({});
       expect(subscribeSpy).toHaveBeenCalled();
-      expect(putSpy).toHaveBeenCalled();
+      httpMock.verify();
     });
   });
 });
