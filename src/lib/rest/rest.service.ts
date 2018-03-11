@@ -128,7 +128,7 @@ export class RestServiceBase<T extends RestItem<any> > {
         if (isNullOrUndefined(itemData['id'])) {
           throw `Id is not defined when getAll from ${resourceUrl} triggered`;
         }
-        const id = Number(itemData['id']);
+        const id = itemData['id'];
         delete itemData['id'];
         return this.create(resourceUrl, id, itemData);
       });

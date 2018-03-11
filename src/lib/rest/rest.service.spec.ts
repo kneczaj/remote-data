@@ -26,7 +26,7 @@ class SampleItem extends RestItem<SampleItemPayload> {
 
   dump() {
     return {
-      A: this.a
+      A: this.a.toString()
     } as SampleItemPayload;
   }
 }
@@ -45,7 +45,7 @@ class SampleDataRestService extends RestService<SampleItem> {
 }
 
 const itemsDBsource: SampleItemPayload[] = [{
-  id: '0',
+  id: 'abx',
   A: '500'
 }, {
   id: '1',
@@ -82,29 +82,31 @@ describe('RestService - functional - with a SampleData', () => {
   it(`creates`, async(() => {
     expect(TestBed.get(SampleDataRestService)).toBeTruthy();
   }));
-  it('gets and item', () => {
-    const queriedId = 0;
+  it('gets an item', () => {
+    const sourceItem = itemsDB[0];
+    const queriedId = sourceItem['id'];
 
     service.get(queriedId).subscribe((item) => {
       subscribeSpy();
-      expect(item.a).toEqual(Number(itemsDB[queriedId]['A']));
-      expect(item.id).toEqual(Number(itemsDB[queriedId]['id']));
+      const dump = item.dump();
+      expect(dump['A']).toEqual(sourceItem['A']);
+      expect(item.id).toEqual(sourceItem['id']);
     });
     const req = httpMock.expectOne(`/sample_data/${queriedId}`);
     expect(req.request.method).toEqual('GET');
-    req.flush(itemsDB[queriedId]);
+    req.flush(sourceItem);
     httpMock.verify();
     expect(subscribeSpy).toHaveBeenCalled();
   });
 
   it('gets all items', () => {
 
-    const queriedIds = new Set(itemsDB.map(item => Number(item.id)));
+    const queriedIds = new Set(itemsDB.map(item => item['id']));
 
     service.getAll().subscribe((items: Array<SampleItem>) => {
       subscribeSpy();
       expect(items.length).toEqual(itemsDB.length);
-      items.map(item => Number(item.id)).forEach(id => queriedIds.delete(id));
+      items.map(item => item.id).forEach(id => queriedIds.delete(id));
       expect(queriedIds.size).toEqual(0, `Not all ids were fetched, left ${queriedIds}`);
     });
 
@@ -131,18 +133,21 @@ describe('RestService - functional - with a SampleData', () => {
   describe('after getting an object with GET', () => {
 
     let item: SampleItem;
-    const queriedId = 0;
+    const sourceItem;
+    const queriedId;
 
     beforeEach(() => {
+      sourceItem = itemsDB[0];
+      queriedId = sourceItem['id'];
       service.get(queriedId).subscribe(newItem => {
         item = newItem;
-        expect(item.a).toEqual(Number(itemsDB[queriedId]['A']));
-        expect(item.id).toEqual(Number(itemsDB[queriedId]['id']));
+        expect(item.dump()['A']).toEqual(sourceItem['A']);
+        expect(item.id).toEqual(sourceItem['id']);
       });
 
       const req = httpMock.expectOne(`/sample_data/${queriedId}`);
       expect(req.request.method).toEqual('GET');
-      req.flush(itemsDB[queriedId]);
+      req.flush(sourceItem);
       httpMock.verify();
     });
 
