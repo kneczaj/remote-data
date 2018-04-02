@@ -133,8 +133,8 @@ describe('RestService - functional - with a SampleData', () => {
   describe('after getting an object with GET', () => {
 
     let item: SampleItem;
-    const sourceItem;
-    const queriedId;
+    let sourceItem;
+    let queriedId;
 
     beforeEach(() => {
       sourceItem = itemsDB[0];
