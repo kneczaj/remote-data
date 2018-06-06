@@ -18,7 +18,7 @@ gulp.task('copy', ['clean'], function() {
   return gulp.src([
     paths.lib + '/**/*',
     '!' + paths.lib + '/**/*.spec.ts',
-    __dirname + '/tsconfig.json'
+    __dirname + '/src/tsconfig.lib.json'
   ]).pipe(gulp.dest(paths.build));
 });
 
@@ -36,14 +36,14 @@ gulp.task('copy:ts', ['clean'], function() {
 
 gulp.task('clean:packageJson', ['copy:project-files'], function() {
   const packageJsonPath = paths.dist + '/package.json';
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
   delete packageJson['scripts'];
   delete packageJson['devDependencies'];
   fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 });
 
 gulp.task('ngc', ['copy'], function() {
-  return ngc(['-p', paths.build + '/tsconfig.json']);
+  return ngc(['-p', paths.build + '/tsconfig.lib.json']);
 });
 
 gulp.task('copy:tsc', ['ngc'], function() {

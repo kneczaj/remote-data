@@ -1,5 +1,4 @@
-import {Observable} from 'rxjs/Observable';
-import {Subject} from 'rxjs/Subject';
+import {Observable, Subject} from 'rxjs';
 
 /**
  * A class to represent a remote resource which value can be updated by fetching the recent state from an Observable on

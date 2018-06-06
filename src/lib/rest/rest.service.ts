@@ -1,6 +1,6 @@
-import {Observable} from 'rxjs/Observable';
+import {Observable} from 'rxjs';
 import {isNull, isNullOrUndefined} from 'util';
-import 'rxjs/add/operator/map';
+import {map} from 'rxjs/operators';
 import {HttpClient} from '@angular/common/http';
 
 /**
@@ -52,11 +52,11 @@ export abstract class RestItem<BackendPayload> {
    * @returns {Observable<RestItem>}
    */
   public delete(): Observable< RestItem<BackendPayload> > {
-    return this.http.delete(`${this.resourceUrl}/${this.id}`).map(request => {
+    return this.http.delete(`${this.resourceUrl}/${this.id}`).pipe(map(request => {
       // TODO: this will work if any subscribe is done, find a way to make it independent
       this._id = null;
       return this;
-    });
+    }));
   }
 
   /**
@@ -75,10 +75,10 @@ export abstract class RestItem<BackendPayload> {
    * @returns {Observable<RestItem>}
    */
   protected create(): Observable< RestItem<BackendPayload> > {
-    return this.http.post<BackendPayload>(this.resourceUrl, this.dump()).map(data => {
+    return this.http.post<BackendPayload>(this.resourceUrl, this.dump()).pipe(map(data => {
       this.id = data['id'];
       return this;
-    });
+    }));
   }
 
   /**
@@ -89,9 +89,9 @@ export abstract class RestItem<BackendPayload> {
     return this.http.put<BackendPayload>(
       `${this.resourceUrl}/${this.id}`,
       this.dump()
-    ).map(() => {
-      return this;
-    });
+    ).pipe(
+      map(() => { return this; })
+    );
   }
 }
 
@@ -123,7 +123,7 @@ export class RestServiceBase<T extends RestItem<any> > {
    * @returns {Observable<Array<T extends RestItem<any>>>}
    */
   getAll(resourceUrl: string): Observable<Array<T>> {
-    return this.http.get(resourceUrl).map((data: Array<{}>) => {
+    return this.http.get(resourceUrl).pipe(map((data: Array<{}>) => {
       return data.map(itemData => {
         if (isNullOrUndefined(itemData['id'])) {
           throw `Id is not defined when getAll from ${resourceUrl} triggered`;
@@ -132,7 +132,7 @@ export class RestServiceBase<T extends RestItem<any> > {
         delete itemData['id'];
         return this.create(resourceUrl, id, itemData);
       });
-    });
+    }));
   }
 
   /**
@@ -142,7 +142,7 @@ export class RestServiceBase<T extends RestItem<any> > {
    * @returns {Observable<T extends RestItem<any>>}
    */
   get(id: number | string, resourceUrl: string): Observable<T> {
-    return this.http.get<{}>(`${resourceUrl}/${id}`).map(data => this.create(resourceUrl, id, data));
+    return this.http.get<{}>(`${resourceUrl}/${id}`).pipe(map(data => this.create(resourceUrl, id, data)));
   }
 
   /**

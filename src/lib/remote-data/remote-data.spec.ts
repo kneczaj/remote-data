@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import {RemoteData} from './remote-data';
 import {Injectable} from '@angular/core';
-import 'rxjs/add/operator/map';
+import {map} from 'rxjs/operators';
 
 class DataPayload {
   a: string | number;
@@ -26,9 +26,9 @@ class SampleService {
   }
 
   fetch() {
-    return this.http.get<DataPayload>('/data').map(payload => {
+    return this.http.get<DataPayload>('/data').pipe(map(payload => {
       return new Data(payload);
-    });
+    }));
   }
 }
 

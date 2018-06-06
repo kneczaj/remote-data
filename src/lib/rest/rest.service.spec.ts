@@ -1,6 +1,5 @@
-import {TestBed, async, inject} from '@angular/core/testing';
+import {TestBed, async} from '@angular/core/testing';
 import {Injectable} from '@angular/core';
-import 'rxjs/add/operator/map';
 import {RestItem, RestService} from './rest.service';
 import { HttpClient } from '@angular/common/http';
 import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
