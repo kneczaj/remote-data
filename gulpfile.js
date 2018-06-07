@@ -39,7 +39,7 @@ gulp.task('clean:packageJson', ['copy:project-files'], function() {
   const packageJson = JSON.parse(fs.readFileSync(packageJsonPath));
   delete packageJson['scripts'];
   delete packageJson['devDependencies'];
-  fs.writeFile(packageJsonPath, JSON.stringify(packageJson));
+  fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2));
 });
 
 gulp.task('ngc', ['copy'], function() {
