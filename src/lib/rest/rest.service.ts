@@ -1,6 +1,6 @@
 import {Observable} from 'rxjs';
 import {isNull, isNullOrUndefined} from 'util';
-import {map} from 'rxjs/operators';
+import {map, mapTo, pluck, tap} from 'rxjs/operators';
 import {HttpClient} from '@angular/common/http';
 
 /**
@@ -15,9 +15,9 @@ export abstract class RestItem<BackendPayload> {
   /**
    * The values are to assign by the class factory
    */
-  constructor(
+  protected constructor(
     public resourceUrl: string,
-    public http: HttpClient
+    private restService: RestService<RestItem<BackendPayload>>
   ) {}
 
   get id(): number | string {
@@ -49,49 +49,28 @@ export abstract class RestItem<BackendPayload> {
 
   /**
    * Makes DELETE request to delete the object from the DB, as the object gets deleted the ID is set to null
-   * @returns {Observable<RestItem>}
+   * @returns {Observable<RestItem<BackendPayload>>}
    */
-  public delete(): Observable< RestItem<BackendPayload> > {
-    return this.http.delete(`${this.resourceUrl}/${this.id}`).pipe(map(request => {
-      // TODO: this will work if any subscribe is done, find a way to make it independent
-      this._id = null;
-      return this;
-    }));
+  public delete(): Observable<RestItem<BackendPayload>> {
+    return this.restService.delete(this).pipe<RestItem<BackendPayload>>(
+      tap(() => { this._id = null; }),
+      mapTo(this)
+    );
   }
 
   /**
    * Saves the item in backend's DB using according request.
    * @returns {Observable<RestItem<BackendPayload>>}
    */
-  public save(): Observable< RestItem<BackendPayload> > {
+  public save(): Observable<RestItem<BackendPayload>> {
     if (isNull(this._id)) {
-      return this.create();
+      return this.restService.post(this).pipe(
+        tap((id: string | number) => this._id = id)
+      ).pipe<RestItem<BackendPayload>>(
+        mapTo(this)
+      );
     }
-    return this.update();
-  }
-
-  /**
-   * Makes POST request to save the object to the DB and assign an ID.
-   * @returns {Observable<RestItem>}
-   */
-  protected create(): Observable< RestItem<BackendPayload> > {
-    return this.http.post<BackendPayload>(this.resourceUrl, this.dump()).pipe(map(data => {
-      this.id = data['id'];
-      return this;
-    }));
-  }
-
-  /**
-   * Makes PUT request to update the object in the DB.
-   * @returns {Observable<RestItem>}
-   */
-  protected update(): Observable< RestItem<BackendPayload> > {
-    return this.http.put<BackendPayload>(
-      `${this.resourceUrl}/${this.id}`,
-      this.dump()
-    ).pipe(
-      map(() => { return this; })
-    );
+    return this.restService.put(this).pipe<RestItem<BackendPayload>>(mapTo(this));
   }
 }
 
@@ -153,7 +132,7 @@ export class RestServiceBase<T extends RestItem<any> > {
   createNew(resourceUrl: string): T {
     return new this.ResourceClass(
       resourceUrl,
-      this.http
+      this
     );
   }
 
@@ -168,6 +147,37 @@ export class RestServiceBase<T extends RestItem<any> > {
     const result = this.createNew(resourceUrl);
     result.load(id, data);
     return result;
+  }
+
+  /**
+   * Makes POST request to save the object to the DB and assign an ID.
+   * @returns {Observable<string | number>} saved object id
+   */
+  public post(item: T): Observable< string | number > {
+    return this.http.post<any>(item.resourceUrl, item.dump()).pipe(
+      pluck('id')
+    );
+  }
+
+  /**
+   * Makes PUT request to update the object in the DB.
+   * @returns {Observable<string | number>} updated object id
+   */
+  public put(item: T): Observable< string | number > {
+    return this.http.put<any>(
+      `${item.resourceUrl}/${item.id}`,
+      item.dump()
+    ).pipe(
+      pluck('id'),
+    );
+  }
+
+  /**
+   * Makes DELETE request to save the object to the DB and assign an ID.
+   * @returns {Observable<T>} deleted object
+   */
+  public delete(item: T): Observable<T> {
+    return this.http.delete(`${item.resourceUrl}/${item.id}`).pipe(mapTo(item));
   }
 }
 
@@ -217,6 +227,8 @@ export class RestService<T extends RestItem<any> > extends RestServiceBase<T> {
    * @returns {T}
    */
   createNew(): T {
-    return super.createNew(this.resourceUrl);
+    // T and ResourceClass which creates new items must be same, but typescript doesn't now as ResourceClass is
+    // a variable, so its value is not available at compile time
+    return super.createNew(this.resourceUrl) as T;
   }
 }
