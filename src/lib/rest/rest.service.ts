@@ -45,7 +45,7 @@ export abstract class RestItem<BackendPayload> {
    * @param {number} id
    * @param {BackendPayload} data
    */
-  abstract load(id: number | string, data: BackendPayload);
+  abstract load(id: number | string, data: BackendPayload): void | Observable<any>;
 
   /**
    * Makes DELETE request to delete the object from the DB, as the object gets deleted the ID is set to null
