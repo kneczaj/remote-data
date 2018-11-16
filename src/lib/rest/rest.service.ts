@@ -53,8 +53,7 @@ export abstract class RestItem<BackendPayload> {
    */
   public delete(): Observable<RestItem<BackendPayload>> {
     return this.restService.delete(this).pipe<RestItem<BackendPayload>>(
-      tap(() => { this._id = null; }),
-      mapTo(this)
+      tap(() => { this._id = null; })
     );
   }
 
