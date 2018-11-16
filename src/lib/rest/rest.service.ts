@@ -1,6 +1,6 @@
 import {Observable} from 'rxjs';
-import {isNull, isNullOrUndefined} from 'util';
-import {map, mapTo, pluck, tap} from 'rxjs/operators';
+import {isNull} from 'util';
+import {map, mapTo, tap} from 'rxjs/operators';
 import {HttpClient} from '@angular/common/http';
 
 /**
@@ -19,6 +19,14 @@ export abstract class RestItem<BackendPayload> {
     public resourceUrl: string,
     private restService: RestService<RestItem<BackendPayload>>
   ) {}
+
+  get itemUrl(): string {
+    return `${this.resourceUrl}/${this.id}`;
+  }
+
+  setId(payload: BackendPayload) {
+    this._id = payload['id'];
+  }
 
   get id(): number | string {
     return this._id;
@@ -42,10 +50,9 @@ export abstract class RestItem<BackendPayload> {
    * Create object from backend data.
    *
    * NOTE: should set the id.
-   * @param {number} id
    * @param {BackendPayload} data
    */
-  abstract load(id: number | string, data: BackendPayload): void | Observable<any>;
+  abstract load(data: BackendPayload): void | Observable<any>;
 
   /**
    * Makes DELETE request to delete the object from the DB, as the object gets deleted the ID is set to null
@@ -63,9 +70,8 @@ export abstract class RestItem<BackendPayload> {
    */
   public save(): Observable<RestItem<BackendPayload>> {
     if (isNull(this._id)) {
-      return this.restService.post(this).pipe(
-        tap((id: string | number) => this._id = id)
-      ).pipe<RestItem<BackendPayload>>(
+      return this.restService.post(this).pipe<BackendPayload, RestItem<BackendPayload>>(
+        tap((payload: BackendPayload) => this.setId(payload)),
         mapTo(this)
       );
     }
@@ -83,7 +89,7 @@ export abstract class RestItem<BackendPayload> {
  * NOTE: this is an a class with no specified resourceUrl. It is useful to create REST services with non-standard
  * URLs e.g. with two levels of ids like /item1/<id>/item_property/<id2>
  */
-export class RestServiceBase<T extends RestItem<any> > {
+export class RestServiceBase<T extends RestItem<BackendPayload>, BackendPayload = any> {
   /**
    * Constructor
    * @param {HttpClient} http
@@ -101,15 +107,8 @@ export class RestServiceBase<T extends RestItem<any> > {
    * @returns {Observable<Array<T extends RestItem<any>>>}
    */
   getAll(resourceUrl: string): Observable<Array<T>> {
-    return this.http.get(resourceUrl).pipe(map((data: Array<{}>) => {
-      return data.map(itemData => {
-        if (isNullOrUndefined(itemData['id'])) {
-          throw `Id is not defined when getAll from ${resourceUrl} triggered`;
-        }
-        const id = itemData['id'];
-        delete itemData['id'];
-        return this.create(resourceUrl, id, itemData);
-      });
+    return this.http.get(resourceUrl).pipe(map((data: Array<BackendPayload>) => {
+      return data.map(itemData => this.create(resourceUrl, itemData));
     }));
   }
 
@@ -120,7 +119,7 @@ export class RestServiceBase<T extends RestItem<any> > {
    * @returns {Observable<T extends RestItem<any>>}
    */
   get(id: number | string, resourceUrl: string): Observable<T> {
-    return this.http.get<{}>(`${resourceUrl}/${id}`).pipe(map(data => this.create(resourceUrl, id, data)));
+    return this.http.get<BackendPayload>(`${resourceUrl}/${id}`).pipe(map(data => this.create(resourceUrl, data)));
   }
 
   /**
@@ -138,36 +137,31 @@ export class RestServiceBase<T extends RestItem<any> > {
   /**
    * Create a item loaded from REST backend
    * @param {string} resourceUrl
-   * @param {number} id
    * @param {{}} data - data payload
    * @returns {T}
    */
-  private create(resourceUrl: string, id: number | string, data: {}): T {
+  private create(resourceUrl: string, data: BackendPayload): T {
     const result = this.createNew(resourceUrl);
-    result.load(id, data);
+    result.load(data);
     return result;
   }
 
   /**
    * Makes POST request to save the object to the DB and assign an ID.
-   * @returns {Observable<string | number>} saved object id
+   * @returns {Observable<BackendPayload>} at least part of full payload so that it is possible to extract id from it
    */
-  public post(item: T): Observable< string | number > {
-    return this.http.post<any>(item.resourceUrl, item.dump()).pipe(
-      pluck('id')
-    );
+  public post(item: T): Observable<BackendPayload> {
+    return this.http.post<BackendPayload>(item.resourceUrl, item.dump());
   }
 
   /**
    * Makes PUT request to update the object in the DB.
-   * @returns {Observable<string | number>} updated object id
+   * @returns {Observable<BackendPayload>} at least part of updated full payload so that it is possible to extract id from it
    */
-  public put(item: T): Observable< string | number > {
-    return this.http.put<any>(
-      `${item.resourceUrl}/${item.id}`,
-      item.dump()
-    ).pipe(
-      pluck('id'),
+  public put(item: T): Observable<BackendPayload> {
+    return this.http.put<BackendPayload>(
+      item.itemUrl,
+      item.dump(),
     );
   }
 
@@ -176,7 +170,7 @@ export class RestServiceBase<T extends RestItem<any> > {
    * @returns {Observable<T>} deleted object
    */
   public delete(item: T): Observable<T> {
-    return this.http.delete(`${item.resourceUrl}/${item.id}`).pipe(mapTo(item));
+    return this.http.delete(item.itemUrl).pipe(mapTo(item));
   }
 }
 

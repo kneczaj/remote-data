@@ -18,9 +18,9 @@ declare class SampleItemPayload {
 class SampleItem extends RestItem<SampleItemPayload> {
   a: number;
 
-  load(id: number, data: SampleItemPayload) {
+  load(data: SampleItemPayload) {
+    this.setId(data);
     this.a = Number(data.A);
-    this.id = id;
   }
 
   dump() {
